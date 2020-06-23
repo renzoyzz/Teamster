@@ -1,5 +1,11 @@
 from enum import Enum
 import discord
+import configparser
+
+config = configparser.ConfigParser()
+config.read('config.ini')
+print('The token is {}'.format(config['DEFAULT']['token']))
+token = config['DEFAULT']['token']
 
 client = discord.Client()
 
@@ -51,4 +57,6 @@ async def on_message(message):
 
 
 
-client.run('')
+
+client.run(token)
+
