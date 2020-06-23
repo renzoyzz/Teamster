@@ -108,5 +108,7 @@ async def on_message(message):
            elif c.name == ctside:
                 for p in lobby.teamTwo:
                     await p.move_to(c)
+        lobby = Lobby()
+        
 
 client.run(token)
