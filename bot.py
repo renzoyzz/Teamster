@@ -1,4 +1,10 @@
 import discord
+import configparser
+
+config = configparser.ConfigParser()
+config.read('config.ini')
+print('The token is {}'.format(config['DEFAULT']['token']))
+token = config['DEFAULT']['token']
 
 client = discord.Client()
 
@@ -14,4 +20,4 @@ async def on_message(message):
         await message.channel.send('Hello')
 
 
-client.run('NzI0Nzc0NDExNTg4MjA2NjQz.XvFL1Q.WjdVAqdUg4BZDc_HLgil3o1Hrgs')
+client.run(token)
