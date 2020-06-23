@@ -31,6 +31,8 @@ lobby = Lobby()
 
 @client.event
 async def on_message(message):
+    # global keyword allows you to modify the variable outside of the current scope. It is used to create a global variable and make changes to the variable in a local context.
+    # https://www.programiz.com/python-programming/global-keyword
     global lobby
     if message.content.startswith('!Teamster'):
         lobby = Lobby()
@@ -50,20 +52,14 @@ async def on_message(message):
             await message.channel.send(p.name)
     elif lobby.stage == Stage.REGISTER_PLAYERS and message.content.startswith('!lockin'):
         await message.channel.send("Moving players to random teams!")
-        playerCount = len(lobby.players)
-        playersPerTeam = math.ceil(playerCount / 2)
         i = 0
-        while i < len(lobby.players) + len(lobby.teamOne) + len(lobby.teamTwo):
+        playerCount = len(lobby.players)
+        while i < playerCount:
             player = random.choice(lobby.players)
             lobby.players.remove(player)
-            if i % 2 or i == 0:
-                if len(lobby.teamOne) >= playersPerTeam:
-                    lobby.teamTwo.append(player)
-                else:
-                    lobby.teamOne.append(player)
+            if i % 2 == 0:
+                lobby.teamOne.append(player)
             else:
-                if len(lobby.teamTwo) >= playersPerTeam:
-                    lobby.teamOne.append(player)
                 lobby.teamTwo.append(player)
             i += 1
         for c in message.channel.guild.voice_channels:
