@@ -1,6 +1,8 @@
 from enum import Enum
 import discord
 import configparser
+import random
+import math
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -19,41 +21,58 @@ class Stage(Enum):
 class Lobby:
     players = []
     stage = Stage.IDLE
-    channelId = 0
+    startingChannel = 0 
     teamOneChannel = 0
     teamTwoChannel = 0
+    teamOne = []
+    teamTwo = []
 
-class Player:
-    def __init__(self, username, id):
-        self.username = username
-        self.id = id
-    
 lobby = Lobby()
-
-
-@client.event
-async def on_ready():
-    print('we are ready mother fucker {0.user}'.format(client))
 
 @client.event
 async def on_message(message):
-    print(message)
-    print(lobby.stage)
-    if lobby.stage == Stage.IDLE and message.content.startswith('!Teamster'):
+    global lobby
+    if message.content.startswith('!Teamster'):
+        lobby = Lobby()
+        for c in message.channel.guild.voice_channels:
+            for m in c.members:
+                if m.id == message.author.id:
+                    lobby.startingChannel = c
+        print(lobby.startingChannel)
         await message.channel.send('Players register by typing !register')
-        lobby.channelId = message.channel.id
         lobby.stage = Stage.REGISTER_PLAYERS
-    if lobby.stage == Stage.REGISTER_PLAYERS and message.content.startswith('!register'):
-        player = Player(message.author.name, message.author.id)
-        lobby.players.append(player)
-        await message.channel.send('{0} has been registered'.format(player.username))
-    if lobby.stage == Stage.REGISTER_PLAYERS and message.content.startswith('!list'):
+    elif lobby.stage == Stage.REGISTER_PLAYERS and message.content.startswith('!register'):
+        lobby.players.append(message.author)
+        await message.channel.send('{0} has been registered'.format(message.author.name))
+        await message.author.move_to(lobby.startingChannel)
+    elif lobby.stage == Stage.REGISTER_PLAYERS and message.content.startswith('!list'):
         for p in lobby.players:
-            await message.channel.send(p.username)
-    if lobby.stage == Stage.REGISTER_PLAYERS and message.content.startswith('!lockin'):
-        for p in lobby.players:
-            await message.channel.send(p.username)
-
+            await message.channel.send(p.name)
+    elif lobby.stage == Stage.REGISTER_PLAYERS and message.content.startswith('!lockin'):
+        await message.channel.send("Moving players to random teams!")
+        playerCount = len(lobby.players)
+        playersPerTeam = math.ceil(playerCount / 2)
+        i = 0
+        while i < len(lobby.players) + len(lobby.teamOne) + len(lobby.teamTwo):
+            player = random.choice(lobby.players)
+            lobby.players.remove(player)
+            if i % 2 or i == 0:
+                if len(lobby.teamOne) >= playersPerTeam:
+                    lobby.teamTwo.append(player)
+                else:
+                    lobby.teamOne.append(player)
+            else:
+                if len(lobby.teamTwo) >= playersPerTeam:
+                    lobby.teamOne.append(player)
+                lobby.teamTwo.append(player)
+            i += 1
+        for c in message.channel.guild.voice_channels:
+           if c.name == 'T-Side':
+                for p in lobby.teamOne:
+                    await p.move_to(c)
+           elif c.name == 'CT-Side':
+                for p in lobby.teamTwo:
+                    await p.move_to(c)
 
 
 
