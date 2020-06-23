@@ -3,6 +3,7 @@ import discord
 import configparser
 import random
 import math
+import time
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -51,15 +52,33 @@ class Stage(Enum):
 
 
 class Lobby:
+    def __init__(self):
+        self.startingChannel = 0
+        self.teamOne = []
+        self.teamTwo = []
+        self.stage = Stage.IDLE
     players = set()
-    stage = Stage.IDLE
-    startingChannel = 0 
     teamOneChannel = 0
     teamTwoChannel = 0
-    teamOne = []
-    teamTwo = []
 
 lobby = Lobby()
+
+async def move_countdown(message):
+    countdown = "3\n2\n1"
+    await message.channel.send(countdown, tts=True)
+    time.sleep(3.8)
+
+def randomly_assign_teams():
+    i = 0
+    playerCount = len(lobby.players)
+    while i < playerCount:
+        player = random.choice(tuple(lobby.players))
+        lobby.players.remove(player)
+        if i % 2 == 0:
+            lobby.teamOne.append(player)
+        else:
+            lobby.teamTwo.append(player)
+        i += 1
 
 @client.event
 async def on_message(message):
@@ -72,7 +91,6 @@ async def on_message(message):
             for m in c.members:
                 if m.id == message.author.id:
                     lobby.startingChannel = c
-        print(lobby.startingChannel)
         await message.channel.send('Players register by typing !register')
         lobby.stage = Stage.REGISTER_PLAYERS
     elif lobby.stage == Stage.REGISTER_PLAYERS and message.content.startswith('!register'):
@@ -91,16 +109,8 @@ async def on_message(message):
         await message.channel.send(configure_team_channel(message))
     elif lobby.stage == Stage.REGISTER_PLAYERS and message.content.startswith('!lockin'):
         await message.channel.send("Moving players to random teams!")
-        i = 0
-        playerCount = len(lobby.players)
-        while i < playerCount:
-            player = random.choice(tuple(lobby.players))
-            lobby.players.remove(player)
-            if i % 2 == 0:
-                lobby.teamOne.append(player)
-            else:
-                lobby.teamTwo.append(player)
-            i += 1
+        await move_countdown(message)
+        randomly_assign_teams()
         for c in message.channel.guild.voice_channels:
            if c.name == tside:
                 for p in lobby.teamOne:
@@ -109,6 +119,6 @@ async def on_message(message):
                 for p in lobby.teamTwo:
                     await p.move_to(c)
         lobby = Lobby()
-        
+
 
 client.run(token)
