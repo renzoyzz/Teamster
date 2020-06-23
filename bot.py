@@ -74,8 +74,5 @@ async def on_message(message):
                 for p in lobby.teamTwo:
                     await p.move_to(c)
 
-
-
-
 client.run(token)
 
