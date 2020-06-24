@@ -14,6 +14,24 @@ ctside = config['DEFAULT']['ctside']
 
 client = discord.Client()
 
+class Stage(Enum):
+    IDLE = 0
+    REGISTER_PLAYERS = 1
+    SPLIT = 2
+
+
+class Lobby:
+    def __init__(self):
+        self.startingChannel = 0
+        self.teamOne = []
+        self.teamTwo = []
+        self.stage = Stage.IDLE
+    players = set()
+    teamOneChannel = 0
+    teamTwoChannel = 0
+
+lobby = Lobby()
+
 def configure_team_channel(message):
     global lobby
     global tside
@@ -44,41 +62,35 @@ def configure_team_channel(message):
             else:
                 return("Supplied channels do not exist, not updating")
 
-class Stage(Enum):
-    IDLE = 0
-    SETUP_CHANNELS = 1
-    REGISTER_PLAYERS = 2
-    SPLIT = 3
-
-
-class Lobby:
-    def __init__(self):
-        self.startingChannel = 0
-        self.teamOne = []
-        self.teamTwo = []
-        self.stage = Stage.IDLE
-    players = set()
-    teamOneChannel = 0
-    teamTwoChannel = 0
-
-lobby = Lobby()
-
 async def move_countdown(message):
     countdown = "3\n2\n1"
     await message.channel.send(countdown, tts=True)
     time.sleep(3.8)
 
 def randomly_assign_teams():
+    global lobby
     i = 0
     playerCount = len(lobby.players)
+    players = lobby.players.copy()
     while i < playerCount:
-        player = random.choice(tuple(lobby.players))
-        lobby.players.remove(player)
+        player = random.choice(tuple(players))
+        players.remove(player)
         if i % 2 == 0:
             lobby.teamOne.append(player)
         else:
             lobby.teamTwo.append(player)
         i += 1
+
+async def move_players_to_team_channels(message):
+    global lobby
+    for c in message.channel.guild.voice_channels:
+        if c.name == tside:
+            for p in lobby.teamOne:
+                await p.move_to(c)
+        elif c.name == ctside:
+            for p in lobby.teamTwo:
+                await p.move_to(c)
+    lobby.stage = Stage.SPLIT
 
 @client.event
 async def on_message(message):
@@ -107,18 +119,16 @@ async def on_message(message):
         await message.channel.send(listOfPlayers)
     elif message.content.startswith('!configure'):
         await message.channel.send(configure_team_channel(message))
-    elif lobby.stage == Stage.REGISTER_PLAYERS and message.content.startswith('!lockin'):
+    elif lobby.stage == Stage.REGISTER_PLAYERS and message.content.startswith('!split'):
+        randomly_assign_teams()
         await message.channel.send("Moving players to random teams!")
         await move_countdown(message)
+        await move_players_to_team_channels(message)
+        lobby.stage = Stage.SPLIT
+    elif lobby.stage == Stage.SPLIT and message.content.startswith('!split'):
         randomly_assign_teams()
-        for c in message.channel.guild.voice_channels:
-           if c.name == tside:
-                for p in lobby.teamOne:
-                    await p.move_to(c)
-           elif c.name == ctside:
-                for p in lobby.teamTwo:
-                    await p.move_to(c)
-        lobby = Lobby()
-
+        await message.channel.send("Reshuffling teams!")
+        await move_countdown(message)
+        await move_players_to_team_channels(message)
 
 client.run(token)
