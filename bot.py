@@ -69,6 +69,8 @@ async def move_countdown(message):
 
 def randomly_assign_teams():
     global lobby
+    lobby.teamOne.clear()
+    lobby.teamTwo.clear()
     i = 0
     playerCount = len(lobby.players)
     players = lobby.players.copy()
