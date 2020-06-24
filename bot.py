@@ -81,7 +81,7 @@ def randomly_assign_teams():
             lobby.teamTwo.append(player)
         i += 1
 
-async def move_players_to_team_channels(message):
+async def move_teams_to_voice_channels(message):
     global lobby
     for c in message.channel.guild.voice_channels:
         if c.name == tside:
@@ -123,12 +123,12 @@ async def on_message(message):
         randomly_assign_teams()
         await message.channel.send("Moving players to random teams!")
         await move_countdown(message)
-        await move_players_to_team_channels(message)
+        await move_teams_to_voice_channels(message)
         lobby.stage = Stage.SPLIT
     elif lobby.stage == Stage.SPLIT and message.content.startswith('!split'):
         randomly_assign_teams()
         await message.channel.send("Reshuffling teams!")
         await move_countdown(message)
-        await move_players_to_team_channels(message)
+        await move_teams_to_voice_channels(message)
 
 client.run(token)
